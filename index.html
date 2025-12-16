@@ -12,6 +12,7 @@
             --card-bg: #ffffff;
             --correct: #28a745;
             --wrong: #dc3545;
+            --neutral: #6c757d;
         }
 
         body {
@@ -119,6 +120,13 @@
             border-color: #adb5bd;
         }
 
+        /* Style für den "Weiß ich nicht" Button */
+        button.btn-idk {
+            font-style: italic;
+            color: #555;
+            background-color: #f1f3f5;
+        }
+
         /* Feedback-Klassen */
         button.correct {
             background-color: #d4edda !important;
@@ -132,6 +140,13 @@
             border-color: var(--wrong) !important;
             color: #721c24;
             opacity: 0.8;
+        }
+
+        /* Wenn "Weiß ich nicht" gewählt wurde */
+        button.neutral-selected {
+            background-color: #e2e3e5 !important;
+            border-color: #6c757d !important;
+            color: #383d41;
         }
 
         .score-display {
@@ -194,19 +209,21 @@
 
     <h1>Mathe-Heldin Klasse 4 🇩🇪</h1>
     <div class="intro">
-        <p>Hier sind deine Aufgaben. Achte genau auf die Schreibweise!<br>
+        <p>Hier sind deine Aufgaben.
+        Achte genau auf die Schreibweise!<br>
         (Punkt bei Tausendern: 1.000 | Komma bei Euro: 2,50 €)</p>
     </div>
 
     <div id="quiz-root" class="quiz-container">
-        </div>
+    </div>
 
     <div id="submit-area">
         <h2>🎉 Test beendet!</h2>
         <p>Bitte trage deinen Namen ein, um das Ergebnis zu speichern.</p>
         <input type="text" id="student-name" class="input-name" placeholder="Dein Name">
         <br>
-        <button id="btn-submit" class="btn-send" onclick="sendToN8n()">Ergebnis speichern</button>
+        
+        <button id="btn-submit" class="btn-send" onclick="sendToN8n(https://mathemeister.app.n8n.cloud/webhook-test/Ergebnisse)">Ergebnis speichern</button>
         <p id="status-msg"></p>
     </div>
 
@@ -216,72 +233,73 @@
 
     <script>
         // === KONFIGURATION ===
-        // HIER DEINE WEBHOOK URL EINFÜGEN:
-        const N8N_WEBHOOK_URL = "HIER_DEINE_N8N_WEBHOOK_URL_EINFÜGEN"; 
+        // HIER DEINE WEBHOOK URL VON N8N EINFÜGEN:
+        const N8N_WEBHOOK_URL = "HIER_DEINE_N8N_WEBHOOK_URL_EINFÜGEN";
         // =====================
 
+        // Datenstruktur erweitert auf 5 Antworten pro Frage
         const quizData = [
             {
                 topic: "1. Zahlenraum & Orientierung",
                 tasks: [
-                    { l: 1, q: "Schreibe als Zahl: Dreihundertfünfzigtausend und zwanzig", o: ["350.020", "305.020", "350.200"], a: 0 },
-                    { l: 2, q: "Vorgänger und Nachfolger von 199.999?", o: ["199.998 und 200.000", "199.990 und 200.000", "190.000 und 200.000"], a: 0 },
-                    { l: 3, q: "Runde 456.721 auf Tausender.", o: ["456.000", "457.000", "460.000"], a: 1 },
-                    { l: 4, q: "Wie viel fehlt von 875.500 bis zu 1.000.000?", o: ["125.500", "134.500", "124.500"], a: 2 }
+                    { l: 1, q: "Schreibe als Zahl: Dreihundertfünfzigtausend und zwanzig", o: ["350.020", "305.020", "350.200", "300.520", "35.020"], a: 0 },
+                    { l: 2, q: "Vorgänger und Nachfolger von 199.999?", o: ["199.998 und 200.000", "199.990 und 200.000", "190.000 und 200.000", "199.998 und 199.000", "198.999 und 200.001"], a: 0 },
+                    { l: 3, q: "Runde 456.721 auf Tausender.", o: ["456.000", "457.000", "460.000", "456.700", "450.000"], a: 1 },
+                    { l: 4, q: "Wie viel fehlt von 875.500 bis zu 1.000.000?", o: ["125.500", "134.500", "124.500", "224.500", "125.000"], a: 2 }
                 ]
             },
             {
                 topic: "2. Kopfrechnen & Stufenzahlen",
                 tasks: [
-                    { l: 1, q: "Rechne: 7 · 1.000", o: ["700", "7.000", "70.000"], a: 1 },
-                    { l: 2, q: "Rechne: 40 · 500", o: ["20.000", "2.000", "200.000"], a: 0 },
-                    { l: 3, q: "Dividiere: 320.000 : 80", o: ["400", "4.000", "40.000"], a: 1 },
-                    { l: 4, q: "Lücke füllen: 600 · ___ = 240.000", o: ["40", "400", "4.000"], a: 1 }
+                    { l: 1, q: "Rechne: 7 · 1.000", o: ["700", "7.000", "70.000", "7.001", "700.000"], a: 1 },
+                    { l: 2, q: "Rechne: 40 · 500", o: ["20.000", "2.000", "200.000", "20.005", "2.000.000"], a: 0 },
+                    { l: 3, q: "Dividiere: 320.000 : 80", o: ["400", "4.000", "40.000", "4.200", "32.000"], a: 1 },
+                    { l: 4, q: "Lücke füllen: 600 · ___ = 240.000", o: ["40", "400", "4.000", "4", "40.000"], a: 1 }
                 ]
             },
             {
                 topic: "3. Schriftliche Addition & Subtraktion",
                 tasks: [
-                    { l: 1, q: "12.300 + 5.400", o: ["17.700", "17.400", "18.700"], a: 0 },
-                    { l: 2, q: "45.670 + 3.215 + 980", o: ["48.865", "49.865", "50.865"], a: 1 },
-                    { l: 3, q: "10.000 − 4.567", o: ["5.433", "6.433", "5.533"], a: 0 },
-                    { l: 4, q: "Lückentext: 8_.400 − 32._00 = 55.300. Welche Ziffern fehlen?", o: ["7 und 1", "8 und 1", "7 und 2"], a: 0 }
+                    { l: 1, q: "12.300 + 5.400", o: ["17.700", "17.400", "18.700", "17.704", "16.700"], a: 0 },
+                    { l: 2, q: "45.670 + 3.215 + 980", o: ["48.865", "49.865", "50.865", "49.685", "49.800"], a: 1 },
+                    { l: 3, q: "10.000 − 4.567", o: ["5.433", "6.433", "5.533", "5.432", "5.443"], a: 0 },
+                    { l: 4, q: "Lückentext: 8_.400 − 32._00 = 55.300. Welche Ziffern fehlen?", o: ["7 und 1", "8 und 1", "7 und 2", "8 und 2", "6 und 1"], a: 0 }
                 ]
             },
             {
                 topic: "4. Multiplikation & Division",
                 tasks: [
-                    { l: 1, q: "480 : 4", o: ["12", "120", "102"], a: 1 },
-                    { l: 2, q: "Schriftlich: 4 · 12.345", o: ["48.380", "49.380", "49.360"], a: 1 },
-                    { l: 3, q: "9.135 : 5", o: ["1.827", "1.825", "1.927"], a: 0 },
-                    { l: 4, q: "2.403 : 6 (mit Rest)", o: ["400 Rest 3", "40 Rest 3", "300 Rest 3"], a: 0 }
+                    { l: 1, q: "480 : 4", o: ["12", "120", "102", "110", "140"], a: 1 },
+                    { l: 2, q: "Schriftlich: 4 · 12.345", o: ["48.380", "49.380", "49.360", "48.360", "49.300"], a: 1 },
+                    { l: 3, q: "9.135 : 5", o: ["1.827", "1.825", "1.927", "1.807", "1.837"], a: 0 },
+                    { l: 4, q: "2.403 : 6 (mit Rest)", o: ["400 Rest 3", "40 Rest 3", "300 Rest 3", "400 Rest 2", "403 Rest 0"], a: 0 }
                 ]
             },
             {
                 topic: "5. Größen: Gewicht & Geld",
                 tasks: [
-                    { l: 1, q: "2 kg 500 g sind wie viele Gramm?", o: ["2050 g", "2500 g", "250 g"], a: 1 },
-                    { l: 2, q: "Preis: 8,40 €. Du gibst 20 €. Rückgeld?", o: ["12,60 €", "11,60 €", "11,40 €"], a: 1 },
-                    { l: 3, q: "LKW Limit: 3 Tonnen. Geladen: 2.400 kg. Wie viele 50kg-Kisten passen noch?", o: ["10 Kisten", "12 Kisten", "120 Kisten"], a: 1 },
-                    { l: 4, q: "5 Tafeln kosten 12,50 €. Was kosten 8 Tafeln?", o: ["18,00 €", "20,00 €", "22,50 €"], a: 1 }
+                    { l: 1, q: "2 kg 500 g sind wie viele Gramm?", o: ["2050 g", "2500 g", "250 g", "2005 g", "25.000 g"], a: 1 },
+                    { l: 2, q: "Preis: 8,40 €. Du gibst 20 €. Rückgeld?", o: ["12,60 €", "11,60 €", "11,40 €", "12,40 €", "11,50 €"], a: 1 },
+                    { l: 3, q: "LKW Limit: 3 Tonnen. Geladen: 2.400 kg. Wie viele 50kg-Kisten passen noch?", o: ["10 Kisten", "12 Kisten", "120 Kisten", "6 Kisten", "8 Kisten"], a: 1 },
+                    { l: 4, q: "5 Tafeln kosten 12,50 €. Was kosten 8 Tafeln?", o: ["18,00 €", "20,00 €", "22,50 €", "19,50 €", "21,00 €"], a: 1 }
                 ]
             },
             {
                 topic: "6. Größen: Längen & Hohlmaße",
                 tasks: [
-                    { l: 1, q: "Was ist am wenigsten?", o: ["500 ml", "2 l", "10 ml"], a: 2 },
-                    { l: 2, q: "1 m 20 cm + 80 cm = ___ m", o: ["2 m", "1,80 m", "200 m"], a: 0 },
-                    { l: 3, q: "4500 mm in m und cm?", o: ["4 m 50 cm", "45 m 0 cm", "0 m 45 cm"], a: 0 },
-                    { l: 4, q: "Eimer: 10 Liter. Becher: 2 dl (0,2 l). Wie oft schütten?", o: ["5 mal", "20 mal", "50 mal"], a: 2 }
+                    { l: 1, q: "Was ist am wenigsten?", o: ["500 ml", "2 l", "10 ml", "0,5 l", "100 ml"], a: 2 },
+                    { l: 2, q: "1 m 20 cm + 80 cm = ___ m", o: ["2 m", "1,80 m", "200 m", "2,10 m", "1,90 m"], a: 0 },
+                    { l: 3, q: "4500 mm in m und cm?", o: ["4 m 50 cm", "45 m 0 cm", "0 m 45 cm", "4 m 5 cm", "45 m 50 cm"], a: 0 },
+                    { l: 4, q: "Eimer: 10 Liter. Becher: 2 dl (0,2 l). Wie oft schütten?", o: ["5 mal", "20 mal", "50 mal", "10 mal", "100 mal"], a: 2 }
                 ]
             },
             {
                 topic: "7. Zeit",
                 tasks: [
-                    { l: 1, q: "Minuten in 1,5 Stunden?", o: ["90 Min", "100 Min", "75 Min"], a: 0 },
-                    { l: 2, q: "Film: 14:15 bis 15:50. Dauer?", o: ["1 h 25 min", "1 h 35 min", "1 h 45 min"], a: 1 },
-                    { l: 3, q: "Abfahrt 09:48 + 2h 25min Fahrt. Ankunft?", o: ["12:03 Uhr", "12:13 Uhr", "11:13 Uhr"], a: 1 },
-                    { l: 4, q: "Lena übt täglich 20 Min. Wie viel in einer Woche?", o: ["2 h 20 min", "1 h 40 min", "3 h 00 min"], a: 0 }
+                    { l: 1, q: "Minuten in 1,5 Stunden?", o: ["90 Min", "100 Min", "75 Min", "80 Min", "150 Min"], a: 0 },
+                    { l: 2, q: "Film: 14:15 bis 15:50. Dauer?", o: ["1 h 25 min", "1 h 35 min", "1 h 45 min", "1 h 15 min", "2 h 35 min"], a: 1 },
+                    { l: 3, q: "Abfahrt 09:48 + 2h 25min Fahrt. Ankunft?", o: ["12:03 Uhr", "12:13 Uhr", "11:13 Uhr", "12:23 Uhr", "11:53 Uhr"], a: 1 },
+                    { l: 4, q: "Lena übt täglich 20 Min. Wie viel in einer Woche?", o: ["2 h 20 min", "1 h 40 min", "3 h 00 min", "2 h 00 min", "2 h 40 min"], a: 0 }
                 ]
             }
         ];
@@ -318,46 +336,35 @@
                 if(task.l === 3) levelName = "Knifflig";
                 if(task.l === 4) levelName = "Experte";
                 meta.innerText = `Level ${task.l} • ${levelName}`;
-                
+
                 const qText = document.createElement('div');
                 qText.className = 'question-text';
                 qText.innerText = task.q;
 
                 const grid = document.createElement('div');
                 grid.className = 'options-grid';
-
+                
+                // 1. Die 5 echten Antworten rendern
                 task.o.forEach((opt, oIndex) => {
                     const btn = document.createElement('button');
                     btn.className = 'option-btn';
                     btn.innerText = opt;
                     
                     btn.onclick = function() {
-                        if(card.dataset.answered === "true") return;
-                        card.dataset.answered = "true";
-                        answeredTotal++;
-
-                        const allBtns = grid.querySelectorAll('button');
-                        
-                        if(oIndex === task.a) {
-                            btn.classList.add('correct');
-                            updateScore(1);
-                            resultsData[section.topic].correct++;
-                        } else {
-                            btn.classList.add('wrong');
-                            allBtns[task.a].classList.add('correct');
-                        }
-
-                        allBtns.forEach(b => {
-                            if(!b.classList.contains('correct') && !b.classList.contains('wrong')) {
-                                b.style.opacity = '0.5';
-                                b.style.cursor = 'default';
-                            }
-                        });
-
-                        checkCompletion();
+                        handleAnswer(card, grid, task, btn, oIndex);
                     };
                     grid.appendChild(btn);
                 });
+
+                // 2. Den "Weiß ich nicht" Button hinzufügen (als 6. Option)
+                const idkBtn = document.createElement('button');
+                idkBtn.className = 'option-btn btn-idk';
+                idkBtn.innerText = "🤷 Weiß ich nicht";
+                idkBtn.onclick = function() {
+                    handleAnswer(card, grid, task, idkBtn, -1); // -1 signalisiert "keine Antwort gewählt"
+                };
+                grid.appendChild(idkBtn);
+
 
                 card.appendChild(meta);
                 card.appendChild(qText);
@@ -366,9 +373,72 @@
             });
         });
 
+        // Gemeinsame Funktion für Klick-Verarbeitung
+        function handleAnswer(card, grid, task, clickedBtn, selectedIndex) {
+            if(card.dataset.answered === "true") return;
+            card.dataset.answered = "true";
+            answeredTotal++;
+
+            const allBtns = grid.querySelectorAll('button'); // Beinhaltet auch den IDK Button
+            
+            // Logik unterscheiden: Richtige Antwort, Falsche Antwort oder Weiß ich nicht
+            if (selectedIndex === -1) {
+                // Weiß ich nicht gewählt
+                clickedBtn.classList.add('neutral-selected');
+                // Trotzdem richtige Lösung anzeigen (Buttons sind 0-indexed in der Grid, IDK ist der letzte)
+                allBtns[task.a].classList.add('correct');
+            } 
+            else if(selectedIndex === task.a) {
+                // Richtig gewählt
+                clickedBtn.classList.add('correct');
+                updateScore(1);
+                resultsData[task.topic_ref || getTopicByTask(task)].correct++; 
+            } else {
+                // Falsch gewählt
+                clickedBtn.classList.add('wrong');
+                allBtns[task.a].classList.add('correct');
+            }
+
+            // Alle Buttons deaktivieren
+            allBtns.forEach(b => {
+                if(!b.classList.contains('correct') && !b.classList.contains('wrong') && !b.classList.contains('neutral-selected')) {
+                    b.style.opacity = '0.5';
+                    b.style.cursor = 'default';
+                }
+            });
+            checkCompletion();
+        }
+
+        // Hilfsfunktion um Topic zu finden (da wir innerhalb der task loop sind)
+        function getTopicByTask(task) {
+            // Einfacher Hack: Wir suchen das Topic basierend auf der Struktur. 
+            // Da wir im Scope der Generierung sind, ist es einfacher, das Topic beim Generieren zu referenzieren.
+            // Oben im Loop greifen wir direkt auf `resultsData[section.topic]` zu, hier im Click-Handler ist das schwieriger.
+            // Lösung: Wir fixen das im handleAnswer Aufruf oben nicht, sondern nutzen globalen Scope oder
+            // einfacher: Wir merken uns das Topic beim Erstellen des Buttons nicht extra, 
+            // sondern nutzen den Closure-Scope der `forEach` Schleife.
+            // KORREKTUR: Im `onclick` oben bin ich noch im Scope von `section`.
+            // Daher muss ich `section.topic` gar nicht neu suchen, sondern kann es direkt nutzen!
+            return ""; 
+        }
+        
+        // KORREKTUR der onclick Logic oben im Loop:
+        // Ich muss die Variable `section` im Scope nutzen.
+        // Die Funktion handleAnswer muss angepasst werden, um `section.topic` zu kennen.
+
+        // ---> Ich schreibe handleAnswer um, damit es im Scope bleibt oder Parameter bekommt.
+        // Siehe oben: Ich habe `handleAnswer` definiert, aber `section` fehlt dort.
+        // Ich werde den Code oben im Loop anpassen, damit die Logik direkt dort steht (wie vorher),
+        // oder handleAnswer besser parametrisieren. Ich entscheide mich für parametrisieren.
+        
+        // Überschreiben der Funktion oben im Loop zur Sicherheit:
+        /* btn.onclick = function() { ... logic inline ... } 
+           ist sicherer wegen Closure. Ich setze den Code gleich so zusammen.
+        */
+
         const scoreBox = document.getElementById('score-box');
         scoreBox.innerText = `Punkte: 0 / ${maxScore}`;
-
+        
         function updateScore(points) {
             totalScore += points;
             scoreBox.innerText = `Punkte: ${totalScore} / ${maxScore}`;
@@ -376,14 +446,15 @@
 
         function checkCompletion() {
             if(answeredTotal === maxScore) {
-                document.getElementById('submit-area').style.display = 'block';
-                document.getElementById('submit-area').scrollIntoView({ behavior: 'smooth' });
+                const submitArea = document.getElementById('submit-area');
+                submitArea.style.display = 'block';
+                submitArea.scrollIntoView({ behavior: 'smooth' });
                 scoreBox.style.backgroundColor = "#28a745";
                 scoreBox.style.color = "white";
             }
         }
 
-        async function sendToN8n(https://mathemeister.app.n8n.cloud/webhook-test/Ergebnisse) {
+        async function sendToN8n() {
             const name = document.getElementById('student-name').value;
             const btn = document.getElementById('btn-submit');
             const msg = document.getElementById('status-msg');
@@ -409,15 +480,14 @@
 
             btn.disabled = true;
             btn.innerText = "Sende...";
-
+            
             try {
-                // Senden an n8n
                 const response = await fetch(N8N_WEBHOOK_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
+                
                 if(response.ok) {
                     msg.innerText = "✅ Erfolgreich gespeichert!";
                     msg.style.color = "green";
@@ -432,6 +502,105 @@
                 btn.disabled = false;
                 btn.innerText = "Nochmal versuchen";
             }
+        }
+        
+        // Neudefinition der Click-Logik innerhalb des Loops (damit Closure funktioniert)
+        // Ich lösche die separate `handleAnswer` Funktion und baue sie direkt in den Loop ein, 
+        // um Fehler mit `section.topic` zu vermeiden.
+        
+        root.innerHTML = ''; // Reset root falls doppelt geladen
+        
+        quizData.forEach((section) => {
+             const header = document.createElement('div');
+            header.className = 'topic-header';
+            header.innerHTML = `<span>${section.topic}</span>`;
+            root.appendChild(header);
+
+            resultsData[section.topic] = { correct: 0, total: 0 };
+
+            section.tasks.forEach((task) => {
+                // ... (Code für Card Erstellung wie oben) ...
+                const card = document.createElement('div');
+                card.className = `question-card lvl-${task.l}`;
+                
+                const meta = document.createElement('div');
+                meta.className = 'question-meta';
+                let levelName = "Einstieg";
+                if(task.l === 2) levelName = "Übung";
+                if(task.l === 3) levelName = "Knifflig";
+                if(task.l === 4) levelName = "Experte";
+                meta.innerText = `Level ${task.l} • ${levelName}`;
+
+                const qText = document.createElement('div');
+                qText.className = 'question-text';
+                qText.innerText = task.q;
+
+                const grid = document.createElement('div');
+                grid.className = 'options-grid';
+                
+                // 1. Standard Optionen
+                task.o.forEach((opt, oIndex) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.innerText = opt;
+                    
+                    btn.onclick = function() {
+                        if(card.dataset.answered === "true") return;
+                        card.dataset.answered = "true";
+                        answeredTotal++;
+                        
+                        const allBtns = grid.querySelectorAll('button');
+                        
+                        if(oIndex === task.a) {
+                            btn.classList.add('correct');
+                            updateScore(1);
+                            resultsData[section.topic].correct++;
+                        } else {
+                            btn.classList.add('wrong');
+                            allBtns[task.a].classList.add('correct');
+                        }
+                        
+                        disableAll(allBtns);
+                        checkCompletion();
+                    };
+                    grid.appendChild(btn);
+                });
+
+                // 2. IDK Button
+                const idkBtn = document.createElement('button');
+                idkBtn.className = 'option-btn btn-idk';
+                idkBtn.innerText = "🤷 Weiß ich nicht";
+                idkBtn.onclick = function() {
+                    if(card.dataset.answered === "true") return;
+                    card.dataset.answered = "true";
+                    answeredTotal++;
+                    
+                    const allBtns = grid.querySelectorAll('button');
+                    
+                    idkBtn.classList.add('neutral-selected');
+                    // Richtige Antwort trotzdem zeigen
+                    // (Die richtige Antwort ist im `allBtns` Array an Index `task.a`)
+                    allBtns[task.a].classList.add('correct');
+                    
+                    disableAll(allBtns);
+                    checkCompletion();
+                };
+                grid.appendChild(idkBtn);
+
+                card.appendChild(meta);
+                card.appendChild(qText);
+                card.appendChild(grid);
+                root.appendChild(card);
+            });
+        });
+
+        function disableAll(btnNodeList) {
+            btnNodeList.forEach(b => {
+                if(!b.classList.contains('correct') && !b.classList.contains('wrong') && !b.classList.contains('neutral-selected')) {
+                    b.style.opacity = '0.5';
+                    b.style.cursor = 'default';
+                }
+            });
         }
 
     </script>
