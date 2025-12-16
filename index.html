@@ -163,9 +163,9 @@
             border: 2px solid var(--primary);
         }
 
-        /* NEU: Submit Bereich */
+        /* NEU: Submit Bereich - Jetzt immer sichtbar */
         #submit-area {
-            display: none; /* Erst sichtbar wenn fertig */
+            display: block; /* War vorher none */
             background: white;
             padding: 30px;
             border-radius: 12px;
@@ -196,12 +196,22 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
+            transition: background 0.3s;
         }
         
         .btn-send:hover { background: #004494; }
         .btn-send:disabled { background: #ccc; cursor: not-allowed; }
+        
+        /* Status Klassen für den Button */
+        .btn-loading { background-color: #e0a800 !important; cursor: wait; }
+        .btn-success { background-color: #28a745 !important; }
+        .btn-error { background-color: #dc3545 !important; }
 
-        #status-msg { margin-top: 15px; font-weight: bold; }
+        #status-msg { 
+            margin-top: 15px; 
+            font-weight: bold; 
+            min-height: 1.5em; /* Platzhalter damit nichts springt */
+        }
 
     </style>
 </head>
@@ -218,12 +228,12 @@
     </div>
 
     <div id="submit-area">
-        <h2>🎉 Test beendet!</h2>
+        <h2>Fertig?</h2>
         <p>Bitte trage deinen Namen ein, um das Ergebnis zu speichern.</p>
         <input type="text" id="student-name" class="input-name" placeholder="Dein Name">
         <br>
         
-        <button id="btn-submit" class="btn-send" onclick="sendToN8n(https://mathemeister.app.n8n.cloud/webhook-test/Ergebnisse)">Ergebnis speichern</button>
+        <button id="btn-submit" class="btn-send" onclick="sendToN8n()">Ergebnis speichern</button>
         <p id="status-msg"></p>
     </div>
 
@@ -233,11 +243,9 @@
 
     <script>
         // === KONFIGURATION ===
-        // HIER DEINE WEBHOOK URL VON N8N EINFÜGEN:
-        const N8N_WEBHOOK_URL = "HIER_DEINE_N8N_WEBHOOK_URL_EINFÜGEN";
+        const N8N_WEBHOOK_URL = "https://mathemeister.app.n8n.cloud/webhook-test/Ergebnisse";
         // =====================
 
-        // Datenstruktur erweitert auf 5 Antworten pro Frage
         const quizData = [
             {
                 topic: "1. Zahlenraum & Orientierung",
@@ -309,20 +317,28 @@
         let maxScore = 0;
         let answeredTotal = 0;
         
-        // Ergebnis-Speicher
         let resultsData = {};
 
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
         // Quiz generieren
-        quizData.forEach((section, sIndex) => {
-            const header = document.createElement('div');
+        root.innerHTML = ''; 
+        
+        quizData.forEach((section) => {
+             const header = document.createElement('div');
             header.className = 'topic-header';
             header.innerHTML = `<span>${section.topic}</span>`;
             root.appendChild(header);
 
-            // Init topic score
             resultsData[section.topic] = { correct: 0, total: 0 };
 
-            section.tasks.forEach((task, tIndex) => {
+            section.tasks.forEach((task) => {
                 maxScore++;
                 resultsData[section.topic].total++;
 
@@ -344,27 +360,62 @@
                 const grid = document.createElement('div');
                 grid.className = 'options-grid';
                 
-                // 1. Die 5 echten Antworten rendern
-                task.o.forEach((opt, oIndex) => {
+                // Shuffle logic
+                let indices = task.o.map((_, i) => i);
+                indices = shuffleArray(indices);
+
+                indices.forEach((originalIndex) => {
+                    const opt = task.o[originalIndex];
                     const btn = document.createElement('button');
                     btn.className = 'option-btn';
                     btn.innerText = opt;
                     
+                    if(originalIndex === task.a) {
+                        btn.dataset.isCorrect = "true";
+                    }
+
                     btn.onclick = function() {
-                        handleAnswer(card, grid, task, btn, oIndex);
+                        if(card.dataset.answered === "true") return;
+                        card.dataset.answered = "true";
+                        answeredTotal++;
+                        
+                        const allBtns = grid.querySelectorAll('button');
+                        
+                        if(originalIndex === task.a) {
+                            btn.classList.add('correct');
+                            updateScore(1);
+                            resultsData[section.topic].correct++;
+                        } else {
+                            btn.classList.add('wrong');
+                            const correctBtn = grid.querySelector('button[data-is-correct="true"]');
+                            if(correctBtn) correctBtn.classList.add('correct');
+                        }
+                        
+                        disableAll(allBtns);
+                        checkCompletion();
                     };
                     grid.appendChild(btn);
                 });
 
-                // 2. Den "Weiß ich nicht" Button hinzufügen (als 6. Option)
+                // IDK Button
                 const idkBtn = document.createElement('button');
                 idkBtn.className = 'option-btn btn-idk';
                 idkBtn.innerText = "🤷 Weiß ich nicht";
                 idkBtn.onclick = function() {
-                    handleAnswer(card, grid, task, idkBtn, -1); // -1 signalisiert "keine Antwort gewählt"
+                    if(card.dataset.answered === "true") return;
+                    card.dataset.answered = "true";
+                    answeredTotal++;
+                    
+                    const allBtns = grid.querySelectorAll('button');
+                    
+                    idkBtn.classList.add('neutral-selected');
+                    const correctBtn = grid.querySelector('button[data-is-correct="true"]');
+                    if(correctBtn) correctBtn.classList.add('correct');
+                    
+                    disableAll(allBtns);
+                    checkCompletion();
                 };
                 grid.appendChild(idkBtn);
-
 
                 card.appendChild(meta);
                 card.appendChild(qText);
@@ -372,69 +423,6 @@
                 root.appendChild(card);
             });
         });
-
-        // Gemeinsame Funktion für Klick-Verarbeitung
-        function handleAnswer(card, grid, task, clickedBtn, selectedIndex) {
-            if(card.dataset.answered === "true") return;
-            card.dataset.answered = "true";
-            answeredTotal++;
-
-            const allBtns = grid.querySelectorAll('button'); // Beinhaltet auch den IDK Button
-            
-            // Logik unterscheiden: Richtige Antwort, Falsche Antwort oder Weiß ich nicht
-            if (selectedIndex === -1) {
-                // Weiß ich nicht gewählt
-                clickedBtn.classList.add('neutral-selected');
-                // Trotzdem richtige Lösung anzeigen (Buttons sind 0-indexed in der Grid, IDK ist der letzte)
-                allBtns[task.a].classList.add('correct');
-            } 
-            else if(selectedIndex === task.a) {
-                // Richtig gewählt
-                clickedBtn.classList.add('correct');
-                updateScore(1);
-                resultsData[task.topic_ref || getTopicByTask(task)].correct++; 
-            } else {
-                // Falsch gewählt
-                clickedBtn.classList.add('wrong');
-                allBtns[task.a].classList.add('correct');
-            }
-
-            // Alle Buttons deaktivieren
-            allBtns.forEach(b => {
-                if(!b.classList.contains('correct') && !b.classList.contains('wrong') && !b.classList.contains('neutral-selected')) {
-                    b.style.opacity = '0.5';
-                    b.style.cursor = 'default';
-                }
-            });
-            checkCompletion();
-        }
-
-        // Hilfsfunktion um Topic zu finden (da wir innerhalb der task loop sind)
-        function getTopicByTask(task) {
-            // Einfacher Hack: Wir suchen das Topic basierend auf der Struktur. 
-            // Da wir im Scope der Generierung sind, ist es einfacher, das Topic beim Generieren zu referenzieren.
-            // Oben im Loop greifen wir direkt auf `resultsData[section.topic]` zu, hier im Click-Handler ist das schwieriger.
-            // Lösung: Wir fixen das im handleAnswer Aufruf oben nicht, sondern nutzen globalen Scope oder
-            // einfacher: Wir merken uns das Topic beim Erstellen des Buttons nicht extra, 
-            // sondern nutzen den Closure-Scope der `forEach` Schleife.
-            // KORREKTUR: Im `onclick` oben bin ich noch im Scope von `section`.
-            // Daher muss ich `section.topic` gar nicht neu suchen, sondern kann es direkt nutzen!
-            return ""; 
-        }
-        
-        // KORREKTUR der onclick Logic oben im Loop:
-        // Ich muss die Variable `section` im Scope nutzen.
-        // Die Funktion handleAnswer muss angepasst werden, um `section.topic` zu kennen.
-
-        // ---> Ich schreibe handleAnswer um, damit es im Scope bleibt oder Parameter bekommt.
-        // Siehe oben: Ich habe `handleAnswer` definiert, aber `section` fehlt dort.
-        // Ich werde den Code oben im Loop anpassen, damit die Logik direkt dort steht (wie vorher),
-        // oder handleAnswer besser parametrisieren. Ich entscheide mich für parametrisieren.
-        
-        // Überschreiben der Funktion oben im Loop zur Sicherheit:
-        /* btn.onclick = function() { ... logic inline ... } 
-           ist sicherer wegen Closure. Ich setze den Code gleich so zusammen.
-        */
 
         const scoreBox = document.getElementById('score-box');
         scoreBox.innerText = `Punkte: 0 / ${maxScore}`;
@@ -444,11 +432,18 @@
             scoreBox.innerText = `Punkte: ${totalScore} / ${maxScore}`;
         }
 
+        function disableAll(btnNodeList) {
+            btnNodeList.forEach(b => {
+                if(!b.classList.contains('correct') && !b.classList.contains('wrong') && !b.classList.contains('neutral-selected')) {
+                    b.style.opacity = '0.5';
+                    b.style.cursor = 'default';
+                }
+            });
+        }
+
         function checkCompletion() {
             if(answeredTotal === maxScore) {
-                const submitArea = document.getElementById('submit-area');
-                submitArea.style.display = 'block';
-                submitArea.scrollIntoView({ behavior: 'smooth' });
+                // Nur noch optisches Feedback am Score-Box, Submit Area ist eh immer da
                 scoreBox.style.backgroundColor = "#28a745";
                 scoreBox.style.color = "white";
             }
@@ -460,7 +455,9 @@
             const msg = document.getElementById('status-msg');
 
             if(!name) {
-                alert("Bitte gib einen Namen ein!");
+                alert("Bitte gib erst deinen Namen ein!");
+                // Kleiner Fokus-Effekt
+                document.getElementById('student-name').focus();
                 return;
             }
 
@@ -478,8 +475,11 @@
                 details: detailsString
             };
 
+            // Button Feedback Start
             btn.disabled = true;
-            btn.innerText = "Sende...";
+            btn.innerText = "🚀 Wird gesendet...";
+            btn.classList.add('btn-loading');
+            msg.innerText = "";
             
             try {
                 const response = await fetch(N8N_WEBHOOK_URL, {
@@ -489,120 +489,28 @@
                 });
                 
                 if(response.ok) {
-                    msg.innerText = "✅ Erfolgreich gespeichert!";
+                    // Button Feedback Success
+                    btn.classList.remove('btn-loading');
+                    btn.classList.add('btn-success');
+                    btn.innerText = "✅ Daten gesendet";
+                    
+                    msg.innerText = "Super! Deine Ergebnisse wurden erfolgreich gespeichert.";
                     msg.style.color = "green";
-                    btn.innerText = "Gesendet";
                 } else {
                     throw new Error("Fehler beim Senden");
                 }
             } catch (error) {
                 console.error(error);
-                msg.innerText = "⚠️ Fehler: Konnte nicht senden. Prüfe Internet/Webhook.";
-                msg.style.color = "red";
+                // Button Feedback Error
+                btn.classList.remove('btn-loading');
+                btn.classList.add('btn-error');
                 btn.disabled = false;
-                btn.innerText = "Nochmal versuchen";
+                btn.innerText = "Fehler - Nochmal versuchen";
+                
+                msg.innerText = "⚠️ Das hat leider nicht geklappt. Prüfe deine Internetverbindung.";
+                msg.style.color = "red";
             }
         }
-        
-        // Neudefinition der Click-Logik innerhalb des Loops (damit Closure funktioniert)
-        // Ich lösche die separate `handleAnswer` Funktion und baue sie direkt in den Loop ein, 
-        // um Fehler mit `section.topic` zu vermeiden.
-        
-        root.innerHTML = ''; // Reset root falls doppelt geladen
-        
-        quizData.forEach((section) => {
-             const header = document.createElement('div');
-            header.className = 'topic-header';
-            header.innerHTML = `<span>${section.topic}</span>`;
-            root.appendChild(header);
-
-            resultsData[section.topic] = { correct: 0, total: 0 };
-
-            section.tasks.forEach((task) => {
-                // ... (Code für Card Erstellung wie oben) ...
-                const card = document.createElement('div');
-                card.className = `question-card lvl-${task.l}`;
-                
-                const meta = document.createElement('div');
-                meta.className = 'question-meta';
-                let levelName = "Einstieg";
-                if(task.l === 2) levelName = "Übung";
-                if(task.l === 3) levelName = "Knifflig";
-                if(task.l === 4) levelName = "Experte";
-                meta.innerText = `Level ${task.l} • ${levelName}`;
-
-                const qText = document.createElement('div');
-                qText.className = 'question-text';
-                qText.innerText = task.q;
-
-                const grid = document.createElement('div');
-                grid.className = 'options-grid';
-                
-                // 1. Standard Optionen
-                task.o.forEach((opt, oIndex) => {
-                    const btn = document.createElement('button');
-                    btn.className = 'option-btn';
-                    btn.innerText = opt;
-                    
-                    btn.onclick = function() {
-                        if(card.dataset.answered === "true") return;
-                        card.dataset.answered = "true";
-                        answeredTotal++;
-                        
-                        const allBtns = grid.querySelectorAll('button');
-                        
-                        if(oIndex === task.a) {
-                            btn.classList.add('correct');
-                            updateScore(1);
-                            resultsData[section.topic].correct++;
-                        } else {
-                            btn.classList.add('wrong');
-                            allBtns[task.a].classList.add('correct');
-                        }
-                        
-                        disableAll(allBtns);
-                        checkCompletion();
-                    };
-                    grid.appendChild(btn);
-                });
-
-                // 2. IDK Button
-                const idkBtn = document.createElement('button');
-                idkBtn.className = 'option-btn btn-idk';
-                idkBtn.innerText = "🤷 Weiß ich nicht";
-                idkBtn.onclick = function() {
-                    if(card.dataset.answered === "true") return;
-                    card.dataset.answered = "true";
-                    answeredTotal++;
-                    
-                    const allBtns = grid.querySelectorAll('button');
-                    
-                    idkBtn.classList.add('neutral-selected');
-                    // Richtige Antwort trotzdem zeigen
-                    // (Die richtige Antwort ist im `allBtns` Array an Index `task.a`)
-                    allBtns[task.a].classList.add('correct');
-                    
-                    disableAll(allBtns);
-                    checkCompletion();
-                };
-                grid.appendChild(idkBtn);
-
-                card.appendChild(meta);
-                card.appendChild(qText);
-                card.appendChild(grid);
-                root.appendChild(card);
-            });
-        });
-
-        function disableAll(btnNodeList) {
-            btnNodeList.forEach(b => {
-                if(!b.classList.contains('correct') && !b.classList.contains('wrong') && !b.classList.contains('neutral-selected')) {
-                    b.style.opacity = '0.5';
-                    b.style.cursor = 'default';
-                }
-            });
-        }
-
     </script>
 </body>
 </html>
