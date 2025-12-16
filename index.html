@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mathe-Profi Klasse 4 (DE)</title>
+    <style>
+        :root {
+            --primary: #0056b3;
+            --secondary: #00a8cc;
+            --bg: #fdfbf7;
+            --card-bg: #ffffff;
+            --correct: #28a745;
+            --wrong: #dc3545;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .intro {
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 30px;
+            color: #666;
+        }
+
+        /* Container für die Themenblöcke */
+        .quiz-container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        /* Überschrift für jedes Thema */
+        .topic-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .question-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border-left: 5px solid #ccc;
+            transition: transform 0.2s;
+        }
+
+        /* Schwierigkeitsgrad-Farben an der Seite */
+        .lvl-1 { border-left-color: #81c784; } /* Leicht - Grün */
+        .lvl-2 { border-left-color: #ffb74d; } /* Mittel - Orange */
+        .lvl-3 { border-left-color: #e57373; } /* Schwer - Rot */
+        .lvl-4 { border-left-color: #9c27b0; } /* Experte - Lila */
+
+        .question-meta {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .options-grid { grid-template-columns: 1fr; }
+        }
+
+        button.option-btn {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 15px;
+            text-align: left;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        button.option-btn:hover {
+            background: #e2e6ea;
+            border-color: #adb5bd;
+        }
+
+        /* Feedback-Klassen */
+        button.correct {
+            background-color: #d4edda !important;
+            border-color: var(--correct) !important;
+            color: #155724;
+            position: relative;
+        }
+        
+        button.wrong {
+            background-color: #f8d7da !important;
+            border-color: var(--wrong) !important;
+            color: #721c24;
+            opacity: 0.8;
+        }
+
+        .score-display {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            font-weight: bold;
+            color: var(--primary);
+            z-index: 100;
+            border: 2px solid var(--primary);
+        }
+
+        /* NEU: Submit Bereich */
+        #submit-area {
+            display: none; /* Erst sichtbar wenn fertig */
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 40px;
+            margin-bottom: 100px;
+            border-top: 5px solid var(--primary);
+        }
+
+        .input-name {
+            padding: 12px;
+            font-size: 1.1rem;
+            width: 80%;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .btn-send {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .btn-send:hover { background: #004494; }
+        .btn-send:disabled { background: #ccc; cursor: not-allowed; }
+
+        #status-msg { margin-top: 15px; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+    <h1>Mathe-Heldin Klasse 4 🇩🇪</h1>
+    <div class="intro">
+        <p>Hier sind deine Aufgaben. Achte genau auf die Schreibweise!<br>
+        (Punkt bei Tausendern: 1.000 | Komma bei Euro: 2,50 €)</p>
+    </div>
+
+    <div id="quiz-root" class="quiz-container">
+        </div>
+
+    <div id="submit-area">
+        <h2>🎉 Test beendet!</h2>
+        <p>Bitte trage deinen Namen ein, um das Ergebnis zu speichern.</p>
+        <input type="text" id="student-name" class="input-name" placeholder="Dein Name">
+        <br>
+        <button id="btn-submit" class="btn-send" onclick="sendToN8n()">Ergebnis speichern</button>
+        <p id="status-msg"></p>
+    </div>
+
+    <div class="score-display" id="score-box">
+        Punkte: 0 / 28
+    </div>
+
+    <script>
+        // === KONFIGURATION ===
+        // HIER DEINE WEBHOOK URL EINFÜGEN:
+        const N8N_WEBHOOK_URL = "HIER_DEINE_N8N_WEBHOOK_URL_EINFÜGEN"; 
+        // =====================
+
+        const quizData = [
+            {
+                topic: "1. Zahlenraum & Orientierung",
+                tasks: [
+                    { l: 1, q: "Schreibe als Zahl: Dreihundertfünfzigtausend und zwanzig", o: ["350.020", "305.020", "350.200"], a: 0 },
+                    { l: 2, q: "Vorgänger und Nachfolger von 199.999?", o: ["199.998 und 200.000", "199.990 und 200.000", "190.000 und 200.000"], a: 0 },
+                    { l: 3, q: "Runde 456.721 auf Tausender.", o: ["456.000", "457.000", "460.000"], a: 1 },
+                    { l: 4, q: "Wie viel fehlt von 875.500 bis zu 1.000.000?", o: ["125.500", "134.500", "124.500"], a: 2 }
+                ]
+            },
+            {
+                topic: "2. Kopfrechnen & Stufenzahlen",
+                tasks: [
+                    { l: 1, q: "Rechne: 7 · 1.000", o: ["700", "7.000", "70.000"], a: 1 },
+                    { l: 2, q: "Rechne: 40 · 500", o: ["20.000", "2.000", "200.000"], a: 0 },
+                    { l: 3, q: "Dividiere: 320.000 : 80", o: ["400", "4.000", "40.000"], a: 1 },
+                    { l: 4, q: "Lücke füllen: 600 · ___ = 240.000", o: ["40", "400", "4.000"], a: 1 }
+                ]
+            },
+            {
+                topic: "3. Schriftliche Addition & Subtraktion",
+                tasks: [
+                    { l: 1, q: "12.300 + 5.400", o: ["17.700", "17.400", "18.700"], a: 0 },
+                    { l: 2, q: "45.670 + 3.215 + 980", o: ["48.865", "49.865", "50.865"], a: 1 },
+                    { l: 3, q: "10.000 − 4.567", o: ["5.433", "6.433", "5.533"], a: 0 },
+                    { l: 4, q: "Lückentext: 8_.400 − 32._00 = 55.300. Welche Ziffern fehlen?", o: ["7 und 1", "8 und 1", "7 und 2"], a: 0 }
+                ]
+            },
+            {
+                topic: "4. Multiplikation & Division",
+                tasks: [
+                    { l: 1, q: "480 : 4", o: ["12", "120", "102"], a: 1 },
+                    { l: 2, q: "Schriftlich: 4 · 12.345", o: ["48.380", "49.380", "49.360"], a: 1 },
+                    { l: 3, q: "9.135 : 5", o: ["1.827", "1.825", "1.927"], a: 0 },
+                    { l: 4, q: "2.403 : 6 (mit Rest)", o: ["400 Rest 3", "40 Rest 3", "300 Rest 3"], a: 0 }
+                ]
+            },
+            {
+                topic: "5. Größen: Gewicht & Geld",
+                tasks: [
+                    { l: 1, q: "2 kg 500 g sind wie viele Gramm?", o: ["2050 g", "2500 g", "250 g"], a: 1 },
+                    { l: 2, q: "Preis: 8,40 €. Du gibst 20 €. Rückgeld?", o: ["12,60 €", "11,60 €", "11,40 €"], a: 1 },
+                    { l: 3, q: "LKW Limit: 3 Tonnen. Geladen: 2.400 kg. Wie viele 50kg-Kisten passen noch?", o: ["10 Kisten", "12 Kisten", "120 Kisten"], a: 1 },
+                    { l: 4, q: "5 Tafeln kosten 12,50 €. Was kosten 8 Tafeln?", o: ["18,00 €", "20,00 €", "22,50 €"], a: 1 }
+                ]
+            },
+            {
+                topic: "6. Größen: Längen & Hohlmaße",
+                tasks: [
+                    { l: 1, q: "Was ist am wenigsten?", o: ["500 ml", "2 l", "10 ml"], a: 2 },
+                    { l: 2, q: "1 m 20 cm + 80 cm = ___ m", o: ["2 m", "1,80 m", "200 m"], a: 0 },
+                    { l: 3, q: "4500 mm in m und cm?", o: ["4 m 50 cm", "45 m 0 cm", "0 m 45 cm"], a: 0 },
+                    { l: 4, q: "Eimer: 10 Liter. Becher: 2 dl (0,2 l). Wie oft schütten?", o: ["5 mal", "20 mal", "50 mal"], a: 2 }
+                ]
+            },
+            {
+                topic: "7. Zeit",
+                tasks: [
+                    { l: 1, q: "Minuten in 1,5 Stunden?", o: ["90 Min", "100 Min", "75 Min"], a: 0 },
+                    { l: 2, q: "Film: 14:15 bis 15:50. Dauer?", o: ["1 h 25 min", "1 h 35 min", "1 h 45 min"], a: 1 },
+                    { l: 3, q: "Abfahrt 09:48 + 2h 25min Fahrt. Ankunft?", o: ["12:03 Uhr", "12:13 Uhr", "11:13 Uhr"], a: 1 },
+                    { l: 4, q: "Lena übt täglich 20 Min. Wie viel in einer Woche?", o: ["2 h 20 min", "1 h 40 min", "3 h 00 min"], a: 0 }
+                ]
+            }
+        ];
+
+        const root = document.getElementById('quiz-root');
+        let totalScore = 0;
+        let maxScore = 0;
+        let answeredTotal = 0;
+        
+        // Ergebnis-Speicher
+        let resultsData = {};
+
+        // Quiz generieren
+        quizData.forEach((section, sIndex) => {
+            const header = document.createElement('div');
+            header.className = 'topic-header';
+            header.innerHTML = `<span>${section.topic}</span>`;
+            root.appendChild(header);
+
+            // Init topic score
+            resultsData[section.topic] = { correct: 0, total: 0 };
+
+            section.tasks.forEach((task, tIndex) => {
+                maxScore++;
+                resultsData[section.topic].total++;
+
+                const card = document.createElement('div');
+                card.className = `question-card lvl-${task.l}`;
+                
+                const meta = document.createElement('div');
+                meta.className = 'question-meta';
+                let levelName = "Einstieg";
+                if(task.l === 2) levelName = "Übung";
+                if(task.l === 3) levelName = "Knifflig";
+                if(task.l === 4) levelName = "Experte";
+                meta.innerText = `Level ${task.l} • ${levelName}`;
+                
+                const qText = document.createElement('div');
+                qText.className = 'question-text';
+                qText.innerText = task.q;
+
+                const grid = document.createElement('div');
+                grid.className = 'options-grid';
+
+                task.o.forEach((opt, oIndex) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'option-btn';
+                    btn.innerText = opt;
+                    
+                    btn.onclick = function() {
+                        if(card.dataset.answered === "true") return;
+                        card.dataset.answered = "true";
+                        answeredTotal++;
+
+                        const allBtns = grid.querySelectorAll('button');
+                        
+                        if(oIndex === task.a) {
+                            btn.classList.add('correct');
+                            updateScore(1);
+                            resultsData[section.topic].correct++;
+                        } else {
+                            btn.classList.add('wrong');
+                            allBtns[task.a].classList.add('correct');
+                        }
+
+                        allBtns.forEach(b => {
+                            if(!b.classList.contains('correct') && !b.classList.contains('wrong')) {
+                                b.style.opacity = '0.5';
+                                b.style.cursor = 'default';
+                            }
+                        });
+
+                        checkCompletion();
+                    };
+                    grid.appendChild(btn);
+                });
+
+                card.appendChild(meta);
+                card.appendChild(qText);
+                card.appendChild(grid);
+                root.appendChild(card);
+            });
+        });
+
+        const scoreBox = document.getElementById('score-box');
+        scoreBox.innerText = `Punkte: 0 / ${maxScore}`;
+
+        function updateScore(points) {
+            totalScore += points;
+            scoreBox.innerText = `Punkte: ${totalScore} / ${maxScore}`;
+        }
+
+        function checkCompletion() {
+            if(answeredTotal === maxScore) {
+                document.getElementById('submit-area').style.display = 'block';
+                document.getElementById('submit-area').scrollIntoView({ behavior: 'smooth' });
+                scoreBox.style.backgroundColor = "#28a745";
+                scoreBox.style.color = "white";
+            }
+        }
+
+        async function sendToN8n() {
+            const name = document.getElementById('student-name').value;
+            const btn = document.getElementById('btn-submit');
+            const msg = document.getElementById('status-msg');
+
+            if(!name) {
+                alert("Bitte gib einen Namen ein!");
+                return;
+            }
+
+            // Aufschlüsselung erstellen
+            let detailsString = "";
+            for (const [topic, score] of Object.entries(resultsData)) {
+                detailsString += `${topic}: ${score.correct}/${score.total}\n`;
+            }
+
+            const payload = {
+                name: name,
+                score: totalScore,
+                max_score: maxScore,
+                date: new Date().toISOString(),
+                details: detailsString
+            };
+
+            btn.disabled = true;
+            btn.innerText = "Sende...";
+
+            try {
+                // Senden an n8n
+                const response = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if(response.ok) {
+                    msg.innerText = "✅ Erfolgreich gespeichert!";
+                    msg.style.color = "green";
+                    btn.innerText = "Gesendet";
+                } else {
+                    throw new Error("Fehler beim Senden");
+                }
+            } catch (error) {
+                console.error(error);
+                msg.innerText = "⚠️ Fehler: Konnte nicht senden. Prüfe Internet/Webhook.";
+                msg.style.color = "red";
+                btn.disabled = false;
+                btn.innerText = "Nochmal versuchen";
+            }
+        }
+
+    </script>
+</body>
+</html>
